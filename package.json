@@ -1,0 +1,55 @@
+{
+  "name": "mapbox-pbf",
+  "version": "0.1.0",
+  "description": "Gago mapbox pbf service",
+  "main": "index.js",
+  "scripts": {
+    "start": "sh ./bin/start_server.sh",
+    "pretest": "rm -rf ./dist; gulp ts;",
+    "test": "export NODE_ENV=test; mocha ./dist --recursive;"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://git.azure.gagogroup.cn/huteng/mapbox-pbf.git"
+  },
+  "private": true,
+  "author": "Hu Teng",
+  "contributors": [
+    {
+      "name": "Hu Teng",
+      "email": "huteng@gagogroup.com"
+    }
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "connect-timeout": "^1.7.0",
+    "express": "^4.14.0",
+    "gulp": "^3.9.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.6.0",
+    "gulp-tslint": "^7.0.1",
+    "gulp-typescript": "^3.0.2",
+    "mapnik": "^3.6.0",
+    "sakura-node": "^2.2.3",
+    "tslint": "^4.5.1",
+    "typescript": "^2.0.3"
+  },
+  "devDependencies": {
+    "@types/body-parser": "0.0.33",
+    "@types/pg": "^6.1.33",
+    "@types/chai": "^3.4.34",
+    "@types/connect-timeout": "0.0.31",
+    "@types/express": "^4.0.33",
+    "@types/mocha": "^2.2.32",
+    "@types/node": "^6.0.45",
+    "@types/node-uuid": "0.0.28",
+    "@types/request-promise": "^4.1.33",
+    "@types/supertest": "^1.1.31",
+    "@types/showdown": "^1.4.31",
+    "aglio": "^2.3.0",
+    "chai": "^3.5.0",
+    "mocha": "^3.0.2",
+    "supertest": "^2.0.0"
+  }
+}
