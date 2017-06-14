@@ -14,17 +14,18 @@ export class MapboxImageRepository extends BaseRepository {
 
       let tableName: string = ApplicationContext.getMapboxGeoTableName();
 
-      let where: string = `Contains(GeomFromText('POLYGON((${polygonNumberArray[0]} ${polygonNumberArray[1]}, 
+
+      let polygon: string = `'POLYGON((${polygonNumberArray[0]} ${polygonNumberArray[1]}, 
                                                           ${polygonNumberArray[2]} ${polygonNumberArray[3]},  
                                                           ${polygonNumberArray[4]} ${polygonNumberArray[5]}, 
                                                           ${polygonNumberArray[6]} ${polygonNumberArray[7]},    
-                                                          ${polygonNumberArray[8]} ${polygonNumberArray[9]}))'
-                                                          , 1), SHAPE)`;
-      const tolerance: number = Math.pow(2, zoom) / (2 * Math.PI * 6378137 / 256) / 20;
-      console.log(tolerance);
-      const query: SelectQuery = new SelectQuery().fromTable(tableName).select(["area", `ST_AsGeoJSON(ST_SIMPLIFY(SHAPE, ${tolerance})) AS geojson`]).where(where);
+                                                          ${polygonNumberArray[8]} ${polygonNumberArray[9]}))'`;
+      let where: string = `st_Contains(GeomFromText(${polygon}, 3), SHAPE) or st_overlaps(GeomFromText(${polygon}, 3), SHAPE)`;
+      // const tolerance: number = Math.pow(2, zoom) / (2 * Math.PI * 6378137 / 256) / 100;
+     // console.log(tolerance);
+      const query: SelectQuery = new SelectQuery().fromTable(tableName).select(["area", `ST_AsGeoJSON(SHAPE) AS geojson`]).where(where);
       const sql: string = queryBuilder.buildSelectQuery(query);
-      console.log(sql);
+      // console.log(sql);
       DBClient.getClient().query(sql).then((result: QueryResult) => {
         if (result.rows && result.rows.length > 0 ) {
           resolve(result);
