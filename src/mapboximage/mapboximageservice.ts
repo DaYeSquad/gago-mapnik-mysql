@@ -2,15 +2,78 @@
 // Use of this source code is governed a license that can be found in the LICENSE file.
 
 import * as path from "path";
+import * as proj4 from "proj4";
 
-let mapnik = require('mapnik');
+import {QueryResult} from "sakura-node-3";
+
+import {MapboxImageRepository} from "./mapboximagerepository";
+
+let mapnik = require("mapnik");
+
+interface ColumnGeoInfo {
+  type: string;
+  properties: any;
+  geometry: any;
+}
+
+interface GeoInfoCollection {
+  type: string;
+  features: Array<ColumnGeoInfo>;
+}
 
 export class MapboxImageService {
+  /**
+   * calculate polygon by image z,x,y
+   *
+   * @private
+   * @static
+   * @param {number} x image x
+   * @param {number} y image y
+   * @param {number} z image zoom
+   * @returns {number[]}
+   *
+   * @memberOf MapboxImageService
+   */
+  static calculatePolygonNumberArray(z: number, x: number, y: number): number[] {
+    let vt: any = new mapnik.VectorTile(z, x, y);
+    let extent: number[] = vt.extent();
+    // let minX: number = extent[0];
+    // let minY: number = extent[1];;
+    // let maxX: number = extent[2];
+    // let maxY: number = extent[3];
 
-  static async getMapboxImage(x: number, y: number, z: number): Promise<Buffer> {
-    return new Promise<Buffer>((resolve, reject) => {
-      let path = require("path");
-      let geo1 = 
+    let firstProjection: string = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs";
+    let secondProjection: string = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+
+    let leftDown: any = proj4(firstProjection, secondProjection, [extent[0], extent[1]]);
+    let rightUp: any = proj4(firstProjection, secondProjection, [extent[2], extent[3]]);
+    let leftUp: any = proj4(firstProjection, secondProjection, [extent[0], extent[3]]);
+    let rightDown: any = proj4(firstProjection, secondProjection, [extent[2], extent[1]]);
+
+    return [...leftDown, ...leftUp, ...rightUp, ...rightDown, ...leftDown];
+  }
+
+  /**
+   *
+   *
+   * @static
+   * @param {number} x image x
+   * @param {number} y image y
+   * @param {number} z image zoom
+   * @returns {Promise<Buffer>}
+   *
+   * @memberOf MapboxImageService
+   */
+  static async getMapboxImage(z: number, x: number, y: number): Promise<Buffer> {
+      // Calculate coordinate of zone
+      let polygonNumberArray: number[] = MapboxImageService.calculatePolygonNumberArray(z, x, y);
+
+      // Get geography info from mysql
+      let geoJsonInfoFromDB: any = await MapboxImageRepository.findGeoJsonInfo(polygonNumberArray, z);
+
+      // Translate rows info to standard mapbox library handle format
+      let geoFormatInfo: GeoInfoCollection = MapboxImageService.translateRowsToGeoFormat(geoJsonInfoFromDB);
+     let geo1 =
 {
     "type": "FeatureCollection",
     "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
@@ -20,7 +83,7 @@ export class MapboxImageService {
             "properties": {},
             "geometry": {
                 "type": "Polygon",
-                "coordinates": [[[124.52086, 49.65901], [124.52085, 49.65902], [124.52084, 49.65904], [124.5208, 49.65909], [124.52076, 49.65915], [124.52072, 49.65923], [124.52073, 49.65927], [124.52072, 49.65932], [124.52071, 49.65936], [124.5207, 49.65938], [124.52066, 49.65947], [124.52067, 49.65955], [124.52068, 49.65956], [124.52067, 49.65963], [124.52067, 49.65964], [124.52089, 49.65948], [124.52098, 49.6593], [124.52086, 49.65901]]]
+                "coordinates": [[[124.45312499999999, 49.83798245308486], [125.15625000000001, 49.83798245308486], [125.15625000000001, 49.38237278700958], [124.45312499999999, 49.38237278700958], [124.45312499999999, 49.83798245308486]]]
             }
         },
         {
@@ -28,24 +91,44 @@ export class MapboxImageService {
             "properties": {},
             "geometry": {
                 "type": "Polygon",
-                "coordinates": [[[124.50009, 49.65396], [124.50008, 49.65396], [124.49998, 49.65403], [124.49989, 49.65411], [124.49979, 49.65416], [124.49999, 49.65418], [124.50009, 49.65396]]]
+                "coordinates": [[[124.45312499999999, 49.83798245308486], [125.15625000000001, 49.38237278700958], [124.45312499999999, 49.38237278700958], [124.45312499999999, 49.83798245308486]]]
             }
         }
     ]
 };
+      // console.log(geoFormatInfo["features"][0]["properties"]);
+      // console.log(JSON.stringify(geoFormatInfo["features"][0]["geometry"]));
 
-      mapnik.register_datasource((path.join(mapnik.settings.paths.input_plugins, 'geojson.input')));
-      var vt1 = new mapnik.VectorTile(9, 433, 174);
-
-      vt1.addGeoJSON(JSON.stringify(geo1), "demo", {});
-
-      vt1.getData({
+      mapnik.register_datasource((path.join(mapnik.settings.paths.input_plugins, "geojson.input")));
+      let vt1: any = new mapnik.VectorTile(0, 0, 0);
+      vt1.addGeoJSON(JSON.stringify(geoFormatInfo), "demo", {});
+      vt1.toGeoJSONSync(0);
+      return vt1.getDataSync({
           level: 9,
-          strategy: 'FILTERED'
-      }, (err: Error, data: Buffer) => {
-          if (err) throw err;
-          resolve(data);
+          strategy: "FILTERED"
       });
-    });
+  }
+
+  static translateRowsToGeoFormat(geoJsonInfoFromDB: QueryResult): GeoInfoCollection {
+    let featrues: Array<ColumnGeoInfo> = [];
+
+    for (let row of geoJsonInfoFromDB["rows"]) {
+      let geojson: any = JSON.parse(row["geojson"]);
+      delete row["SHAPE"];
+      delete row["geojson"];
+      let columnGeoInfo: ColumnGeoInfo = {
+        "type": "Feature",
+        "properties": row,
+        "geometry": geojson
+      };
+      featrues.push(columnGeoInfo);
+    }
+
+    let geoInfoCollection: GeoInfoCollection = {
+      "type": "FeatureCollection",
+      "features": featrues
+    };
+
+    return geoInfoCollection;
   }
 }

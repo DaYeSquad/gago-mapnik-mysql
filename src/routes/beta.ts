@@ -9,7 +9,7 @@ import * as express from "express";
 import * as timeout from "connect-timeout";
 import * as bodyParser from "body-parser";
 
-import {corsAllowAll, haltOnTimedout, BadRequestResponse, ApiError, ErrorResponse} from "sakura-node";
+import {corsAllowAll, haltOnTimedout, BadRequestResponse, ApiError, ErrorResponse} from "sakura-node-3";
 
 import {errorHandler} from "../middleware/errorhandler";
 import {MapboxImageController} from "../mapboximage/mapboximagecontroller";

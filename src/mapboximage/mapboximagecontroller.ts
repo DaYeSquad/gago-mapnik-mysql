@@ -1,7 +1,7 @@
 // Copyright 2017 huteng (huteng@gagogroup.com). All rights reserved.,
 // Use of this source code is governed a license that can be found in the LICENSE file.
 
-import {Validator, BadRequestResponse, SuccessResponse, ErrorResponse, DateUtil} from "sakura-node";
+import {Validator, BadRequestResponse, SuccessResponse, ErrorResponse, DateUtil} from "sakura-node-3";
 
 import {BaseController, Request, Response, NextFunction} from "../base/basecontroller";
 
@@ -21,11 +21,12 @@ export class MapboxImageController extends BaseController {
         return;
       }
 
-      let imageData: Buffer = await MapboxImageService.getMapboxImage(x, y, z);
-          console.log(imageData);
+      let imageData: Buffer = await MapboxImageService.getMapboxImage(z, x, y);
+
       res.send(imageData);
 
     } catch (err) {
+      console.log(err)
       next(err);
     }
   }
