@@ -26,7 +26,11 @@ export class MapboxImageRepository extends BaseRepository {
       const sql: string = queryBuilder.buildSelectQuery(query);
       console.log(sql);
       DBClient.getClient().query(sql).then((result: QueryResult) => {
-        resolve(result);
+        if (result.rows && result.rows.length > 0 ) {
+          resolve(result);
+        } else {
+          reject(new Error("NO_DATA"));
+        }
       });
     });
   }

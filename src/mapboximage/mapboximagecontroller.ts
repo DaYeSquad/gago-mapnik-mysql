@@ -26,8 +26,11 @@ export class MapboxImageController extends BaseController {
       res.send(imageData);
 
     } catch (err) {
-      console.log(err)
-      next(err);
+      if (err.message === "NO_DATA") {
+        res.json(new ErrorResponse("NO_DATA", 501));
+      }else {
+        next(err);
+      }
     }
   }
 }
