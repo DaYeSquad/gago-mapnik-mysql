@@ -7,7 +7,9 @@
   "scripts": {
     "start": "sh ./bin/start_server.sh",
     "pretest": "rm -rf ./dist; gulp ts;",
-    "test": "export NODE_ENV=test; mocha ./dist --recursive;"
+    "test": "export NODE_ENV=test; mocha ./dist --recursive;",
+    "prepublish": "gulp ts;",
+    "postpublish": "rm -rf ./lib;"
   },
   "repository": {
     "type": "git",
