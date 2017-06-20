@@ -5,65 +5,44 @@ var gulp = require('gulp');
 var rename = require('gulp-rename');
 var ts = require('gulp-typescript');
 var tsSourcemaps = require('gulp-sourcemaps');
-var spawn = require('child_process').spawn;
-var tslint = require('gulp-tslint');
-var node;
-
-/**
- * $ gulp tslint
- *
- * Check TypeScript code style.
- */
-gulp.task('tslint', function() {
-  gulp.src(['src/**/*.ts', 'src/**/**/*.ts', 'src/*.ts'])
-    .pipe(tslint({
-      formatter: 'verbose'
-    }))
-    .pipe(tslint.report());
-});
+var merge = require('merge2');
+var clean = require('gulp-clean');
+var runSequence = require('run-sequence');
 
 /**
  * $ gulp ts
  *
  * Compile TypeScript files into 'dist/'.
  */
-var tsProject = ts.createProject('src/tsconfig.json');
+var tsProject = ts.createProject('./tsconfig.json');
 gulp.task('ts', function() {
   var tsResult = tsProject.src()
     .pipe(tsSourcemaps.init())
     .pipe(tsProject());
-  return tsResult.js
-    .pipe(tsSourcemaps.write('.'))
-    .pipe(gulp.dest('dist/'));
+  return merge([
+    tsResult.js
+      .pipe(tsSourcemaps.write('.'))
+      .pipe(gulp.dest('./lib/js')),
+    tsResult.dts
+      .pipe(gulp.dest('./lib/definitions'))
+  ]);
 });
 
 /**
- * $ gulp server
+ * $ gulp clean
  *
- * Start the server.
+ * Clean ./lib folder.
  */
-gulp.task('server', function() {
-  if (node) node.kill();
-  node = spawn('node', ['dist/app.js'], {stdio: 'inherit'});
-  node.on('close', function (code) {
-    if (code === 8) {
-      gulp.log('Error detected, waiting for changes');
-    }
-  })
+gulp.task('clean', function() {
+  return gulp.src('./lib', {read: false})
+    .pipe(clean({force: true}));
 });
 
 /**
  * $ gulp
  *
- * Watch *.ts changes => recompile => restart the server.
+ * Clean ./lib and rebuild.
  */
-gulp.task('default', ['server'], function () {
-  gulp.watch('src/**/*.ts', ['ts']);
-
-  gulp.watch('dist/**/*.js', ['server']);
-});
-
-// clean up if an error goes unhandled.
-process.on('exit', function() {
-  if (node) node.kill()
+gulp.task('default', function() {
+  runSequence('clean', 'ts');
 });

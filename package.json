@@ -1,8 +1,9 @@
 {
-  "name": "mapbox-pbf",
-  "version": "0.1.0",
-  "description": "Gago mapbox pbf service",
-  "main": "index.js",
+  "name": "sakura-mapnik",
+  "version": "1.0.0",
+  "description": "Rendering vector tile as pbf from MySQL",
+  "main": "./lib/js/index.js",
+  "types": "./lib/definitions/index.d.ts",
   "scripts": {
     "start": "sh ./bin/start_server.sh",
     "pretest": "rm -rf ./dist; gulp ts;",
@@ -10,11 +11,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://git.azure.gagogroup.cn/huteng/mapbox-pbf.git"
+    "url": "https://github.com/DaYeSquad/gago-mapnik-mysql"
   },
-  "private": true,
-  "author": "Hu Teng",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "contributors": [
+    {
+      "name": "Frank Lin",
+      "email": "linxiaoyi@gagogroup.com"
+    },
+    {
+      "name": "Wu Qingchun",
+      "email": "wuqinchun@gagogroup.com"
+    },
     {
       "name": "Hu Teng",
       "email": "huteng@gagogroup.com"
@@ -22,20 +32,9 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.15.2",
-    "connect-timeout": "^1.7.0",
-    "express": "^4.14.0",
-    "gulp": "^3.9.1",
-    "gulp-rename": "^1.2.2",
-    "gulp-sourcemaps": "^1.6.0",
-    "gulp-tslint": "^7.0.1",
-    "gulp-typescript": "^3.0.2",
     "mapnik": "^3.6.0",
-    "mysql": "^2.13.0",
     "proj4": "^2.4.3",
-    "sakura-node-3": "^3.0.3",
-    "tslint": "^4.5.1",
-    "typescript": "^2.0.3"
+    "sakura-node-3": "^3.0.3"
   },
   "devDependencies": {
     "@types/body-parser": "0.0.33",
@@ -54,6 +53,19 @@
     "aglio": "^2.3.0",
     "chai": "^3.5.0",
     "mocha": "^3.0.2",
-    "supertest": "^2.0.0"
+    "supertest": "^2.0.0",
+    "tslint": "^4.5.1",
+    "typescript": "^2.0.3",
+    "gulp": "^3.9.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.6.0",
+    "gulp-tslint": "^7.0.1",
+    "gulp-typescript": "^3.0.2",
+    "gulp-clean": "^0.3.2",
+    "merge2": "^1.0.2",
+    "body-parser": "^1.15.2",
+    "connect-timeout": "^1.7.0",
+    "run-sequence": "^1.2.2",
+    "express": "^4.14.0"
   }
 }
