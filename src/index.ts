@@ -114,7 +114,7 @@ export class MapnikService {
                                                           ${coordinates[4]} ${coordinates[5]}, 
                                                           ${coordinates[6]} ${coordinates[7]},    
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
-    let where: string = `st_Contains(GeomFromText(${polygon}, 3), SHAPE) or st_overlaps(GeomFromText(${polygon}, 3), SHAPE)`;
+    let where: string = `st_Contains(GeomFromText(${polygon}, 1), SHAPE) or st_overlaps(GeomFromText(${polygon}, 1), SHAPE)`;
     const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(SHAPE) AS geojson`, ...fields]).where(where);
     return await MapnikService.client_.query(query);
   }
