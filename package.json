@@ -1,5 +1,5 @@
 {
-  "name": "sakura-mapnik",
+  "name": "gago-mapnik-mysql",
   "version": "1.0.0",
   "description": "Rendering vector tile as pbf from MySQL",
   "main": "./lib/js/index.js",
