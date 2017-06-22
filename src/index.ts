@@ -5,6 +5,7 @@ import * as path from "path";
 import * as proj4 from "proj4";
 
 import {DBClient, QueryResult, SelectQuery} from "sakura-node-3";
+import {WGS84} from "proj4";
 
 let mapnik = require("mapnik");
 
@@ -13,7 +14,15 @@ let mapnik = require("mapnik");
  * 初始化参数
  */
 export interface MapnikServiceOptions {
-  client: DBClient // 用于查询的数据库
+  client: DBClient; // 用于查询的数据库
+  spatialReference: SpatialReference; // 用于构建坐标系
+}
+
+/**
+ * 坐标系
+ */
+export enum SpatialReference {
+  WGS84 = 8001
 }
 
 interface GeoJson {
@@ -28,22 +37,47 @@ interface GeoJsonFeatureCollection {
   features: GeoJson[];
 }
 
+
 /**
  * Mapnik 对 MySQL 的兼容性支持
  *
  * Usage:
- *  MapnikService.init({client: client}); // 其中 client 为初始化过的 DBClient
+ *  MapnikService.init({client: client, spatialReference: SpatialReference.WGS84}); // 其中 client 为初始化过的 DBClient
  *  const pbf: Buffer = await MapnikService.queryTileAsPbf("lands", ["owner", "displayName"], 3, 7, 5);
  */
 export class MapnikService {
   private static client_: DBClient;
+  private static spatialReference_: SpatialReference;
 
   /**
    * 初始化 service
    * @param options 可选参数
    */
-  static init(options: MapnikServiceOptions): void {
-    MapnikService.client_ = options.client;
+  static async init(options: MapnikServiceOptions): Promise<void> {
+    const client: DBClient = options.client;
+
+    MapnikService.client_ = client;
+    MapnikService.spatialReference_ = options.spatialReference;
+
+    // MySQL 依赖 spatial_ref_sys 表来索引坐标系，故在初始化时应建表并插入数据
+    //  SRID int(11)
+    //  AUTH_NAME varchar(256)
+    //  AUTH_SRID int(11)
+    //  SRTEXT varchar(2048)
+    const createTableSql: string =
+      `CREATE TABLE IF NOT EXISTS spatial_ref_sys
+(
+    SRID INT(11) PRIMARY KEY NOT NULL,
+    AUTH_NAME VARCHAR(256),
+    AUTH_SRID INT(11),
+    SRTEXT VARCHAR(2048)
+);
+CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
+    await client.query(createTableSql);
+
+    // 根据用户指定的坐标系加入
+    const replaceSql: string = MapnikService.spaRefSysReplaceSql_(options.spatialReference);
+    await client.query(replaceSql);
   }
 
   /**
@@ -98,8 +132,9 @@ export class MapnikService {
     let vt: any = new mapnik.VectorTile(z, x, y);
     let extent: number[] = vt.extent();
 
+    // TODO(lin.xiaoe.f@gmail.com): 暂时只支持墨卡托
     let firstProjection: string = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs";
-    let secondProjection: string = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+    let secondProjection: string = MapnikService.proj4StringFromSpatialReference_(MapnikService.spatialReference_);
 
     let leftDown: any = proj4(firstProjection, secondProjection, [extent[0], extent[1]]);
     let rightUp: any = proj4(firstProjection, secondProjection, [extent[2], extent[3]]);
@@ -114,7 +149,7 @@ export class MapnikService {
                                                           ${coordinates[4]} ${coordinates[5]}, 
                                                           ${coordinates[6]} ${coordinates[7]},    
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
-    let where: string = `st_Contains(GeomFromText(${polygon}, 1), SHAPE) or st_overlaps(GeomFromText(${polygon}, 1), SHAPE)`;
+    let where: string = `st_Contains(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), SHAPE) or st_overlaps(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), SHAPE)`;
     const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(SHAPE) AS geojson`, ...fields]).where(where);
     return await MapnikService.client_.query(query);
   }
@@ -145,5 +180,31 @@ export class MapnikService {
       "type": "FeatureCollection",
       "features": features
     };
+  }
+
+  /**
+   * 根据坐标系给出 MySQL 创建 spa_ref_sys 表的 sql
+   * @param spf 坐标系
+   * @returns {string} 插入的 SQL
+   * @private
+   */
+  private static spaRefSysReplaceSql_(spf: SpatialReference): string {
+    if (spf === SpatialReference.WGS84) {
+      return `REPLACE INTO spatial_ref_sys (SRID, AUTH_NAME, AUTH_SRID, SRTEXT) VALUES (${WGS84}, null, null, 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]');`;
+    } else {
+      throw new Error("Unknown spatial reference");
+    }
+  }
+
+  /**
+   * 转出坐标系的 string 表达式
+   * @private
+   */
+  private static proj4StringFromSpatialReference_(spf: SpatialReference): string {
+    if (spf === SpatialReference.WGS84) {
+      return `+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs`;
+    } else {
+      throw new Error("Unknown spatial reference");
+    }
   }
 }

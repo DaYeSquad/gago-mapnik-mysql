@@ -1,6 +1,6 @@
 {
   "name": "gago-mapnik-mysql",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Rendering vector tile as pbf from MySQL",
   "main": "./lib/js/index.js",
   "types": "./lib/definitions/index.d.ts",
