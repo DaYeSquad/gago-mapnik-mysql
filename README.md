@@ -23,3 +23,7 @@ const pbf: Buffer = await MapnikService.queryTileAsPbf("lands", ["owner", "displ
 5.导入 csv - `LOAD DATA LOCAL INFILE '/Users/FrankLin/Downloads/2_min.csv' INTO TABLE test_lands_1 FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' (land_id,WKT)`
 
 6.将该表的 WKT 列转为 SHAPE 列，类型为 Geometry (正在编写转换器)
+
+# 运行环境
+
+由于底层 gcc 的限制，目前测试过的环境为 Ubuntu，如果需要在其他环境上编译可能需要自己 build gcc，可以参考[此处](https://github.com/DaYeSquad/gago-mapnik-mysql/blob/master/rhel7.2%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85GCC5.3.md)。
