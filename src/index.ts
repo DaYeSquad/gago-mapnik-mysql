@@ -1,11 +1,10 @@
-// Copyright 2017 huteng (huteng@gagogroup.com). All rights reserved.,
+// Copyright 2017 Frank Lin (lin.xiaoe.f@gmail.com). All rights reserved.
 // Use of this source code is governed a license that can be found in the LICENSE file.
 
 import * as path from "path";
 import * as proj4 from "proj4";
 
 import {DBClient, QueryResult, SelectQuery} from "sakura-node-3";
-import {WGS84} from "proj4";
 
 let mapnik = require("mapnik");
 
@@ -15,14 +14,40 @@ let mapnik = require("mapnik");
  */
 export interface MapnikServiceOptions {
   client: DBClient; // 用于查询的数据库
+
   spatialReference: SpatialReference; // 用于构建坐标系
+
+  /**
+   * 需要和前端校对该字段 (见下文的 source-layer)，用于前端展示 protobuf 数据控制图层时候使用
+   * @程正豪说: 如果没有这个值，或者传的值不对，地块是加载不出来的，控制台也不报错，非常恐怖
+   *
+   * const vectorSourceOptions = {
+        type: 'fill',
+        id: 'LandVectorLayer',
+        'source-layer': 'zed',
+        interactive: true,
+        minzoom: 0,
+        maxzoom: 18,
+        layout: {
+          visibility: 'visible',
+        },
+        paint: {
+          'fill-color': this.props.fillColorStops,
+          'fill-outline-color': '#000',
+        },
+        filter: this.props.emptyFilter ? ['!has', 'cropType'] : ['has', 'cropType']
+      };
+   */
+  mapboxVectorSourceLayerName: string;
+
+  shapeColumnAlias?: string; // 用于重命名 shape 字段 (geometry 类型)
 }
 
 /**
  * 坐标系
  */
 export enum SpatialReference {
-  WGS84 = 8001
+  WGS84 = 0
 }
 
 interface GeoJson {
@@ -48,6 +73,8 @@ interface GeoJsonFeatureCollection {
 export class MapnikService {
   private static client_: DBClient;
   private static spatialReference_: SpatialReference;
+  private static shapeColumnName: string = "SHAPE";
+  private static mapboxVectorSourceLayerName: string = "demo";
 
   /**
    * 初始化 service
@@ -58,6 +85,11 @@ export class MapnikService {
 
     MapnikService.client_ = client;
     MapnikService.spatialReference_ = options.spatialReference;
+    MapnikService.mapboxVectorSourceLayerName = options.mapboxVectorSourceLayerName;
+
+    if (options.shapeColumnAlias) {
+      MapnikService.shapeColumnName = options.shapeColumnAlias;
+    }
 
     // MySQL 依赖 spatial_ref_sys 表来索引坐标系，故在初始化时应建表并插入数据
     //  SRID int(11)
@@ -73,7 +105,13 @@ export class MapnikService {
     SRTEXT VARCHAR(2048)
 );
 CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
-    await client.query(createTableSql);
+    try {
+      await client.query(createTableSql);
+    } catch(e) {
+      if (e.message !== "ER_DUP_KEYNAME: Duplicate key name 'spatial_ref_sys_SRID_uindex'") {
+        throw e;
+      }
+    }
 
     // 根据用户指定的坐标系加入
     const replaceSql: string = MapnikService.spaRefSysReplaceSql_(options.spatialReference);
@@ -102,7 +140,7 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
     return new Promise<Buffer>((resolve, reject) => {
       mapnik.register_datasource((path.join(mapnik.settings.paths.input_plugins, "geojson.input")));
       let vt: any = new mapnik.VectorTile(z, x, y);
-      vt.addGeoJSON(JSON.stringify(featureCollection), "demo", {});
+      vt.addGeoJSON(JSON.stringify(featureCollection), MapnikService.mapboxVectorSourceLayerName, {});
       vt.toGeoJSONSync(0);
       vt.getData({
         compression: compression,
@@ -149,8 +187,9 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
                                                           ${coordinates[4]} ${coordinates[5]}, 
                                                           ${coordinates[6]} ${coordinates[7]},    
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
-    let where: string = `st_Contains(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), SHAPE) or st_overlaps(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), SHAPE)`;
-    const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(SHAPE) AS geojson`, ...fields]).where(where);
+    let where: string = `st_Contains(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName}) or st_overlaps(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName})`;
+    const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(${MapnikService.shapeColumnName}) AS geojson`, ...fields]).where(where);
+    console.log(DBClient.getClient().queryToString(query));
     return await MapnikService.client_.query(query);
   }
 
@@ -165,7 +204,7 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
 
     for (let row of result.rows) {
       let geoJson: any = JSON.parse(row["geojson"]);
-      delete row["SHAPE"];
+      delete row[`${MapnikService.shapeColumnName}`];
       delete row["geojson"];
       let columnGeoInfo: GeoJson = {
         "type": "Feature",
@@ -190,7 +229,7 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
    */
   private static spaRefSysReplaceSql_(spf: SpatialReference): string {
     if (spf === SpatialReference.WGS84) {
-      return `REPLACE INTO spatial_ref_sys (SRID, AUTH_NAME, AUTH_SRID, SRTEXT) VALUES (${WGS84}, null, null, 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]');`;
+      return `REPLACE INTO spatial_ref_sys (SRID, AUTH_NAME, AUTH_SRID, SRTEXT) VALUES (${SpatialReference.WGS84}, null, null, 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]');`;
     } else {
       throw new Error("Unknown spatial reference");
     }
