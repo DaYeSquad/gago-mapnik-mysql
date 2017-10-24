@@ -5,8 +5,12 @@ gago-mapnik-mysql 是用来支持 Mapnik + MySQL 渲染 pbf 的方案
 
 # USAGE
 
-```
-MapnikService.init({client: client, spatialReference: WGS84}); // 其中 client 为初始化过的 DBClient
+```TypeScript
+MapnikService.init({
+client: client, // 其中 client 为初始化过的 DBClient，可以通过 DBClient.createClient 返回 (依赖 sakura-node-ts)
+spatialReference: SpatialReference.WGS84,  // 暂时只支持 WGS84
+mapboxVectorSourceLayerName: "street", // 需要和前端校对的名字，详情见注释
+shapeColumnAlias: "geom"}); // 如果 geometry 列名要更改则需要修改此处
 const pbf: Buffer = await MapnikService.queryTileAsPbf("lands", ["owner", "displayName"], 3, 7, 5);
 ```
 
@@ -23,6 +27,9 @@ const pbf: Buffer = await MapnikService.queryTileAsPbf("lands", ["owner", "displ
 5.导入 csv - `LOAD DATA LOCAL INFILE '/Users/FrankLin/Downloads/2_min.csv' INTO TABLE test_lands_1 FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' (land_id,WKT)`
 
 6.将该表的 WKT 列转为 SHAPE 列，类型为 Geometry (正在编写转换器)
+
+7.为 SHAPE 列构建索引 - `CREATE SPATIAL INDEX g ON table (SHAPE);`
+
 
 # 运行环境
 
