@@ -14,7 +14,7 @@
     "url": "https://github.com/DaYeSquad/gago-mapnik-mysql"
   },
   "publishConfig": {
-    "registry": "http://npmjs.gagogroup.cn/"
+    "registry": "https://registry.npmjs.org/"
   },
   "contributors": [
     {
