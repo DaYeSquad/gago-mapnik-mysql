@@ -51,7 +51,6 @@ router.get("/land/:z/:x/:y", async (req: express.Request, res: express.Response,
     res.contentType("application/x-protobuf");
     res.end(pbf);
   } catch (e) {
-    console.log(e);
     res.json(JSON.stringify(e));
   }
 });

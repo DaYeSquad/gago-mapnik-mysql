@@ -189,7 +189,6 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
     let where: string = `st_Contains(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName}) or st_overlaps(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName})`;
     const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(${MapnikService.shapeColumnName}) AS geojson`, ...fields]).where(where);
-    console.log(DBClient.getClient().queryToString(query));
     return await MapnikService.client_.query(query);
   }
 
