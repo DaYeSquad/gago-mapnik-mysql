@@ -49,11 +49,20 @@ router.get("/land/:z/:x/:y", async (req: express.Request, res: express.Response,
 
   // logic
   try {
-    const pbf: Buffer = await MapnikService.queryTileAsPbf("land", mapnikQueryFields, z, x, y);
-    res.contentType("application/x-protobuf");
-    res.end(pbf);
+    const pbf: Buffer | undefined = await MapnikService.queryTileAsPbf("land", mapnikQueryFields, z, x, y);
+    if (pbf) {
+      res.contentType("application/x-protobuf");
+      res.end(pbf);
+    } else {
+      res.status(404).json(undefined);
+    }
   } catch (e) {
-    res.json(JSON.stringify(e));
+    res.status(500).json({
+      error: {
+        code: 500,
+        message: "Internal Server Error"
+      }
+    });
   }
 });
 app.use(router);

@@ -129,9 +129,13 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
    * @returns {Promise<Buffer>} pbf 流
    */
   static async queryTileAsPbf(tableName: string, fields: string[], z: number, x: number, y: number,
-                              compression: "none" | "gzip" = "none"): Promise<Buffer> {
+                              compression: "none" | "gzip" = "none"): Promise<Buffer | undefined> {
     // 查询 Polygon 并返回 GeoJSON 格式
     let result: QueryResult = await MapnikService.queryFeaturesAsGeoJson_(tableName, fields, z, x, y);
+
+    if (result.rows.length === 0) {
+      return undefined;
+    }
 
     // 转为 GeoJSON Feature Collection 的格式
     let featureCollection: GeoJsonFeatureCollection = MapnikService.queryResultToFeatureCollection_(result);
