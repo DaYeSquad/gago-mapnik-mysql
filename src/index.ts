@@ -191,7 +191,7 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
                                                           ${coordinates[4]} ${coordinates[5]}, 
                                                           ${coordinates[6]} ${coordinates[7]},    
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
-    let where: string = `st_Contains(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName}) or st_overlaps(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName})`;
+    let where: string = `MBRIntersects(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName})`;
     const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(${MapnikService.shapeColumnName}) AS geojson`, ...fields]).where(where);
     return await MapnikService.client_.query(query);
   }

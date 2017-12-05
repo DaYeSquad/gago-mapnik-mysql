@@ -25,12 +25,14 @@ MapnikService.init({
   shapeColumnAlias: "geom"
 });
 
-// const mapnikQueryFields: string[] = ["id", "crop_type AS cropType", "measured_area AS measuredArea", "plot_type AS plotType",
-//   "identify_time AS identifyTime", "location", "inspection_type AS inspectionType",
-//   "harvests", "harvests_period AS harvestsPeriod","harvest_area AS harvestArea",
-//   "land_contract_number AS landContractNumber","noharvest"];
+const tableName: string = "plot";
+const mapnikQueryFields: string[] = ["id", "crop_type AS cropType", "measured_area AS measuredArea", "plot_type AS plotType",
+  "identify_time AS identifyTime", "location", "inspection_type AS inspectionType",
+  "harvests", "harvests_period AS harvestsPeriod","harvest_area AS harvestArea",
+  "land_contract_number AS landContractNumber","noharvest"];
 
-const mapnikQueryFields: string[] = ["id,farm_id,crop_id,object_code,area,farmwork_id,emerge_rate,attribute, yield, yield_all"];
+// const tableName: string = "land";
+// const mapnikQueryFields: string[] = ["id,farm_id,crop_id,object_code,area,farmwork_id,emerge_rate,attribute, yield, yield_all"];
 
 // 设置路由启动 server
 const app: express.Application = express();
@@ -49,7 +51,7 @@ router.get("/land/:z/:x/:y", async (req: express.Request, res: express.Response,
 
   // logic
   try {
-    const pbf: Buffer | undefined = await MapnikService.queryTileAsPbf("land", mapnikQueryFields, z, x, y);
+    const pbf: Buffer | undefined = await MapnikService.queryTileAsPbf(tableName, mapnikQueryFields, z, x, y);
     if (pbf) {
       res.contentType("application/x-protobuf");
       res.end(pbf);
