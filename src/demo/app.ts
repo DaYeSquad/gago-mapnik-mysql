@@ -62,7 +62,7 @@ router.get("/land/:z/:x/:y", async (req: express.Request, res: express.Response,
     res.status(500).json({
       error: {
         code: 500,
-        message: "Internal Server Error"
+        message: `Internal Server Error ${e}`
       }
     });
   }

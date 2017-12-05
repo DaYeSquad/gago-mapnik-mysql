@@ -145,7 +145,6 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
       mapnik.register_datasource((path.join(mapnik.settings.paths.input_plugins, "geojson.input")));
       let vt: any = new mapnik.VectorTile(z, x, y);
       vt.addGeoJSON(JSON.stringify(featureCollection), MapnikService.mapboxVectorSourceLayerName, {});
-      vt.toGeoJSONSync(0);
       vt.getData({
         compression: compression,
         level: 9,
@@ -192,7 +191,12 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
                                                           ${coordinates[6]} ${coordinates[7]},    
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
     let where: string = `MBRIntersects(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName})`;
-    const query: SelectQuery = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(${MapnikService.shapeColumnName}) AS geojson`, ...fields]).where(where);
+    let query: SelectQuery;
+    if (z > 11) {
+      query = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(${MapnikService.shapeColumnName}) AS geojson`, ...fields]).where(where);
+    } else {
+      query = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(ST_Simplify(${MapnikService.shapeColumnName}, ${MapnikService.simplifyDistance_(MapnikService.spatialReference_, z)})) AS geojson`, ...fields]).where(where);
+    }
     return await MapnikService.client_.query(query);
   }
 
@@ -245,6 +249,18 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
   private static proj4StringFromSpatialReference_(spf: SpatialReference): string {
     if (spf === SpatialReference.WGS84) {
       return `+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs`;
+    } else {
+      throw new Error("Unknown spatial reference");
+    }
+  }
+
+  /**
+   * 根据坐标系给出简化多边形时候的经验值
+   * @private
+   */
+  private static simplifyDistance_(spf: SpatialReference, z: number): number {
+    if (spf === SpatialReference.WGS84) {
+      return 0.128 / (2 ^ (z - 1));
     } else {
       throw new Error("Unknown spatial reference");
     }
