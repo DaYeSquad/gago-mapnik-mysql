@@ -1,6 +1,6 @@
 {
   "name": "@gago/mapnik-mysql",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Rendering vector tile as pbf from MySQL",
   "main": "./lib/js/index.js",
   "types": "./lib/definitions/index.d.ts",
@@ -34,7 +34,7 @@
   "dependencies": {
     "mapnik": "^3.6.0",
     "proj4": "^2.4.3",
-    "sakura-node-3": "^3.3.5"
+    "sakura-node-3": "^3.3.6"
   },
   "devDependencies": {
     "@types/body-parser": "0.0.33",

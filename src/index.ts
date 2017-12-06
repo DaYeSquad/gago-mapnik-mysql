@@ -13,9 +13,15 @@ let mapnik = require("mapnik");
  * 初始化参数
  */
 export interface MapnikServiceOptions {
-  client: DBClient; // 用于查询的数据库
+  /**
+   * 用于查询的数据库
+   */
+  client: DBClient;
 
-  spatialReference: SpatialReference; // 用于构建坐标系
+  /**
+   * 用于构建坐标系
+   */
+  spatialReference: SpatialReference;
 
   /**
    * 需要和前端校对该字段 (见下文的 source-layer)，用于前端展示 protobuf 数据控制图层时候使用
@@ -40,7 +46,16 @@ export interface MapnikServiceOptions {
    */
   mapboxVectorSourceLayerName: string;
 
-  shapeColumnAlias?: string; // 用于重命名 shape 字段 (geometry 类型)
+  /**
+   * 用于重命名 shape 字段 (geometry 类型)
+   */
+  shapeColumnAlias?: string;
+
+  /**
+   * 在展示大批量的数据的时候会用到图形简化，比如可以想象你要展示全国地图的时候图形不需要有那么详尽的点，可以通过重载该函数来指定抽稀算法
+   * 如果该函数返回值为0的时候则不抽稀，默认为 0.128 / Math.pow(2, z - 1)
+   */
+  simplifyDistance?: (spf: SpatialReference, z: number) => number;
 }
 
 /**
@@ -75,6 +90,7 @@ export class MapnikService {
   private static spatialReference_: SpatialReference;
   private static shapeColumnName: string = "SHAPE";
   private static mapboxVectorSourceLayerName: string = "demo";
+  private static simplifyDistance = MapnikService.simplifyDistance_;
 
   /**
    * 初始化 service
@@ -192,10 +208,13 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
                                                           ${coordinates[8]} ${coordinates[9]}))'`;
     let where: string = `MBRIntersects(GeomFromText(${polygon}, ${MapnikService.spatialReference_}), ${MapnikService.shapeColumnName})`;
     let query: SelectQuery;
-    if (z > 11) {
+
+    const simplifyDistance: number = MapnikService.simplifyDistance(MapnikService.spatialReference_, z);
+
+    if (simplifyDistance === 0) {
       query = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(${MapnikService.shapeColumnName}) AS geojson`, ...fields]).where(where);
     } else {
-      query = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(ST_Simplify(${MapnikService.shapeColumnName}, ${MapnikService.simplifyDistance_(MapnikService.spatialReference_, z)})) AS geojson`, ...fields]).where(where);
+      query = new SelectQuery().fromTable(tableName).select([`ST_AsGeoJSON(ST_Simplify(${MapnikService.shapeColumnName}, ${simplifyDistance})) AS geojson`, ...fields]).where(where);
     }
     return await MapnikService.client_.query(query);
   }
@@ -260,7 +279,11 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
    */
   private static simplifyDistance_(spf: SpatialReference, z: number): number {
     if (spf === SpatialReference.WGS84) {
-      return 0.128 / (2 ^ (z - 1));
+      if (z > 10) {
+        return 0.128 / (Math.pow(2, z - 1));
+      } else {
+        return 0;
+      }
     } else {
       throw new Error("Unknown spatial reference");
     }
