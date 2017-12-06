@@ -5,3 +5,4 @@ export * from "./mapnikservice";
 
 export * from "./cache/mvtcache";
 export * from "./cache/diskcache";
+export * from "./cache/databasecache";
