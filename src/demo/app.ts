@@ -6,6 +6,7 @@ import * as express from "express";
 
 import {MapnikService, SpatialReference} from "../mapnikservice";
 import {DiskCache} from "../cache/diskcache";
+import {DatabaseCache} from "../cache/databasecache";
 
 const driverOptions: DriverOptions = {
   type: DriverType.MYSQL,
@@ -24,7 +25,7 @@ MapnikService.init({
   spatialReference: SpatialReference.WGS84,
   mapboxVectorSourceLayerName: "zyra",
   shapeColumnAlias: "geom",
-  cache: new DiskCache("/tmp")
+  cache: new DatabaseCache(DBClient.getClient(), "mvt_cache")
 });
 
 const tableName: string = "plot";

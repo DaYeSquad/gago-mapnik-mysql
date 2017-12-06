@@ -14,6 +14,17 @@ shapeColumnAlias: "geom"}); // 如果 geometry 列名要更改则需要修改此
 const pbf: Buffer = await MapnikService.queryTileAsPbf("lands", ["owner", "displayName"], 3, 7, 5);
 ```
 
+# 缓存
+
+该库支持磁盘缓存(DiskCache)、数据库缓存(DatabaseCache)两种，使用方法见 `src/cache/diskcache.ts` 和 `src/cache/databasecache`。
+特别要注意用 DatabaseCache 时需先按以下 SQL 构建表:
+
+```SQL
+CREATE TABLE IF NOT EXISTS mvt_cache (id VARCHAR(255) NOT NULL PRIMARY KEY, mvt TEXT);
+CREATE UNIQUE INDEX tile ON mvt_cache (id);
+```
+
+
 # 将 GeoJSON 导入 MySQL
 
 1.首先安装[conda](https://conda.io/miniconda.html)
