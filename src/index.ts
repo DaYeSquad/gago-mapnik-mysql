@@ -279,7 +279,7 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
    */
   private static simplifyDistance_(spf: SpatialReference, z: number): number {
     if (spf === SpatialReference.WGS84) {
-      if (z > 10) {
+      if (z < 10) {
         return 0.128 / (Math.pow(2, z - 1));
       } else {
         return 0;
