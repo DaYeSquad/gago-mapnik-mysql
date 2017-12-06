@@ -159,9 +159,9 @@ CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
                               compression: "none" | "gzip" = "none"): Promise<Buffer | undefined> {
     // 如果有缓存则直接走缓存
     if (MapnikService.cache_) {
-      const result: Buffer | undefined = await MapnikService.cache_.fetch(z, x, y);
-      if (result) {
-        return result;
+      const cacheResult: Buffer | undefined = await MapnikService.cache_.fetch(z, x, y);
+      if (cacheResult) {
+        return cacheResult;
       }
     }
 

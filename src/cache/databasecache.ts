@@ -1,6 +1,7 @@
 // Copyright 2017 Frank Lin (lin.xiaoe.f@gmail.com). All rights reserved.
 // Use of this source code is governed a license that can be found in the LICENSE file.
 
+import * as fs from "fs";
 import {MvtCache} from "./mvtcache";
 import {DBClient, QueryResult, SelectQuery} from "sakura-node-3";
 
@@ -12,7 +13,7 @@ import {DBClient, QueryResult, SelectQuery} from "sakura-node-3";
  * 第二个字段名为 "mvt", 类型是 BLOB
  *
  * SQL:
- *  CREATE TABLE IF NOT EXISTS mvt_cache (id VARCHAR(255) NOT NULL PRIMARY KEY, mvt TEXT);
+ *  CREATE TABLE IF NOT EXISTS mvt_cache (id VARCHAR(255) NOT NULL PRIMARY KEY, mvt LONGTEXT);
  *  CREATE UNIQUE INDEX tile ON mvt_cache (id);
  */
 export class DatabaseCache extends MvtCache {
@@ -42,7 +43,7 @@ export class DatabaseCache extends MvtCache {
    * @override
    */
   save(z: number, x: number, y: number, mvt: Buffer): void {
-    const insertRawSql: string = `INSERT INTO ${this.tableName_} VALUES ('${this.mvtKeyName_(z, x, y)}', '${mvt.toString("base64")}')`;
+    const insertRawSql: string = `REPLACE INTO ${this.tableName_} VALUES ('${this.mvtKeyName_(z, x, y)}', '${mvt.toString("base64")}')`;
     this.client_.query(insertRawSql);
   }
 

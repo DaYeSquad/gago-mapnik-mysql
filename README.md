@@ -20,9 +20,11 @@ const pbf: Buffer = await MapnikService.queryTileAsPbf("lands", ["owner", "displ
 特别要注意用 DatabaseCache 时需先按以下 SQL 构建表:
 
 ```SQL
-CREATE TABLE IF NOT EXISTS mvt_cache (id VARCHAR(255) NOT NULL PRIMARY KEY, mvt TEXT);
+CREATE TABLE IF NOT EXISTS mvt_cache (id VARCHAR(255) NOT NULL PRIMARY KEY, mvt LONGTEXT);
 CREATE UNIQUE INDEX tile ON mvt_cache (id);
 ```
+
+如果有某地块特别大，还需要更改单条 SQL 语句的大小上限到 10MB (方法见 https://stackoverflow.com/questions/16335011/what-is-maximum-query-size-for-mysql)
 
 
 # 将 GeoJSON 导入 MySQL
