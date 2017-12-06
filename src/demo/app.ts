@@ -4,7 +4,8 @@
 import {BadRequestResponse, DBClient, DriverOptions, DriverType, Validator} from "sakura-node-3";
 import * as express from "express";
 
-import {MapnikService, SpatialReference} from "../index";
+import {MapnikService, SpatialReference} from "../mapnikservice";
+import {DiskCache} from "../cache/diskcache";
 
 const driverOptions: DriverOptions = {
   type: DriverType.MYSQL,
@@ -22,7 +23,8 @@ MapnikService.init({
   client: DBClient.getClient(),
   spatialReference: SpatialReference.WGS84,
   mapboxVectorSourceLayerName: "zyra",
-  shapeColumnAlias: "geom"
+  shapeColumnAlias: "geom",
+  cache: new DiskCache("/tmp")
 });
 
 const tableName: string = "plot";
