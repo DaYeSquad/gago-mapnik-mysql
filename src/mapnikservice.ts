@@ -62,6 +62,11 @@ export interface MapnikServiceOptions {
    * 缓存
    */
   cache?: MvtCache;
+
+  /**
+   * 是否在启动的时候创建表，默认为 true
+   */
+  createTableWhenInit?: boolean;
 }
 
 /**
@@ -118,13 +123,14 @@ export class MapnikService {
       MapnikService.cache_ = options.cache;
     }
 
-    // MySQL 依赖 spatial_ref_sys 表来索引坐标系，故在初始化时应建表并插入数据
-    //  SRID int(11)
-    //  AUTH_NAME varchar(256)
-    //  AUTH_SRID int(11)
-    //  SRTEXT varchar(2048)
-    const createTableSql: string =
-      `CREATE TABLE IF NOT EXISTS spatial_ref_sys
+    if (options.createTableWhenInit) {
+      // MySQL 依赖 spatial_ref_sys 表来索引坐标系，故在初始化时应建表并插入数据
+      //  SRID int(11)
+      //  AUTH_NAME varchar(256)
+      //  AUTH_SRID int(11)
+      //  SRTEXT varchar(2048)
+      const createTableSql: string =
+        `CREATE TABLE IF NOT EXISTS spatial_ref_sys
 (
     SRID INT(11) PRIMARY KEY NOT NULL,
     AUTH_NAME VARCHAR(256),
@@ -132,17 +138,18 @@ export class MapnikService {
     SRTEXT VARCHAR(2048)
 );
 CREATE UNIQUE INDEX spatial_ref_sys_SRID_uindex ON spatial_ref_sys (SRID);`;
-    try {
-      await client.query(createTableSql);
-    } catch(e) {
-      if (e.message !== "ER_DUP_KEYNAME: Duplicate key name 'spatial_ref_sys_SRID_uindex'") {
-        throw e;
+      try {
+        await client.query(createTableSql);
+      } catch(e) {
+        if (e.message !== "ER_DUP_KEYNAME: Duplicate key name 'spatial_ref_sys_SRID_uindex'") {
+          throw e;
+        }
       }
-    }
 
-    // 根据用户指定的坐标系加入
-    const replaceSql: string = MapnikService.spaRefSysReplaceSql_(options.spatialReference);
-    await client.query(replaceSql);
+      // 根据用户指定的坐标系加入
+      const replaceSql: string = MapnikService.spaRefSysReplaceSql_(options.spatialReference);
+      await client.query(replaceSql);
+    }
   }
 
   /**
